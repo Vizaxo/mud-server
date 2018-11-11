@@ -19,10 +19,16 @@ greeting = do
       setLocal EnteredName
     EnteredName -> do
       name <- ask
-      setLocal (LoggedIn (Player Spawn name))
+      let player = Player name
+      setLocal (LoggedIn player)
+      modifyGlobal (addPlayer player Spawn)
       tell $ "Hello, " <> name
-    LoggedIn (Player location name) -> do
-      tell $ name <> ", you are in " <> show location
+    LoggedIn p@(Player name) -> do
+      World players <- getGlobal
+      tell ("The following players are logged in: " <> show ((fst) <$> players) <> "\n")
+      case lookup p players of
+        Nothing -> tell "Not found in list of logged-in players."
+        Just location -> tell $ name <> ", you are in " <> show location
 
 runMud :: Int -> IO ()
-runMud = run NotLoggedIn World greeting
+runMud = run NotLoggedIn (World []) greeting

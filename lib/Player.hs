@@ -1,9 +1,6 @@
 module Player where
 
-import World
-
 data Player = Player
-  { pos :: Location
-  , name :: String
+  { name :: String
   }
-  deriving Show
+  deriving (Eq, Show)
