@@ -43,6 +43,7 @@ extra-deps:
 - stm-2.5.0.0
 - bytestring-0.10.8.2
 - mtl-2.2.2
+- parsec-3.1.13.0
 
 # Override default flag values for local packages and extra-deps
 # flags: {}

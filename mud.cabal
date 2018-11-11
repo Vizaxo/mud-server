@@ -21,6 +21,7 @@ library
                      , stm
                      , bytestring
                      , mtl
+                     , parsec
   default-extensions:  OverloadedStrings
                      , LambdaCase
                      , DeriveFunctor
