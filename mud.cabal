@@ -18,6 +18,7 @@ library
   exposed-modules:     Mud
   build-depends:       base >= 4.7 && < 5
                      , network
+                     , stm
                      , bytestring
                      , mtl
   default-extensions:  OverloadedStrings
@@ -25,6 +26,10 @@ library
                      , DeriveFunctor
                      , InstanceSigs
                      , GeneralizedNewtypeDeriving
+                     , ScopedTypeVariables
+  exposed-modules:     Networking
+                     , Player
+                     , World
 
 executable mud
   hs-source-dirs:      src
