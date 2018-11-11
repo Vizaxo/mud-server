@@ -18,6 +18,11 @@ library
   exposed-modules:     Mud
   build-depends:       base >= 4.7 && < 5
                      , network
+                     , bytestring
+  default-extensions:  OverloadedStrings
+                     , LambdaCase
+                     , DeriveFunctor
+                     , InstanceSigs
 
 executable mud
   hs-source-dirs:      src
