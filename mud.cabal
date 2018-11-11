@@ -19,10 +19,12 @@ library
   build-depends:       base >= 4.7 && < 5
                      , network
                      , bytestring
+                     , mtl
   default-extensions:  OverloadedStrings
                      , LambdaCase
                      , DeriveFunctor
                      , InstanceSigs
+                     , GeneralizedNewtypeDeriving
 
 executable mud
   hs-source-dirs:      src

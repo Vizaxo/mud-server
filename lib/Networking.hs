@@ -1,18 +1,20 @@
 module Networking where
 
 import Control.Concurrent
-import Control.Monad
-import Control.Applicative
-import Data.Monoid ((<>))
+import Control.Monad.Reader
+import Data.Monoid
 import System.Environment
 import Text.Read
 
-import Data.ByteString (ByteString)
-import qualified Data.ByteString as BS
+import qualified Data.ByteString.Char8 as CBS
 import Network.Socket hiding (send, sendTo, recv, recvFrom)
 import Network.Socket.ByteString
 
-import qualified Network.Socket.ByteString.Lazy as LN (sendAll)
+newtype Communicate a = Communicate { unComm :: ReaderT Socket IO a }
+  deriving (Functor, Applicative, Monad, MonadIO, MonadReader Socket)
+
+runComm :: Communicate a -> Socket -> IO a
+runComm = runReaderT . unComm
 
 main :: IO ()
 main = do getArgs >>= \case
@@ -26,7 +28,7 @@ usage :: IO ()
 usage = do name <- getProgName
            putStrLn $ "Usage: " <> name <> " [port]"
 
-run :: (Socket -> IO ()) -> Int -> IO a
+run :: Communicate a -> Int -> IO a
 run f port = withSocketsDo $ do
   addr <- resolve $ show port
   sock <- socket (addrFamily addr) (addrSocketType addr) (addrProtocol addr)
@@ -38,7 +40,7 @@ run f port = withSocketsDo $ do
 
   forever $ do
     (conn,peer) <- accept sock
-    forkFinally (f conn) (const $ close conn)
+    forkFinally (runComm f conn) (const $ close conn)
 
 resolve port = do
   let hints = defaultHints
@@ -48,5 +50,15 @@ resolve port = do
   addr:_ <- getAddrInfo (Just hints) Nothing (Just port)
   return addr
 
-echo :: Socket -> IO ()
-echo s = send s "connection established" >> forever (recv s 1024 >>= send s)
+write :: String -> Communicate ()
+write str = do
+  sock <- ask
+  void $ liftIO $ send sock (CBS.pack str)
+
+receive :: Communicate String
+receive = do
+  sock <- ask
+  liftIO $ (init . init . CBS.unpack) <$> recv sock 1024
+
+echo :: Communicate ()
+echo = write "connection established" >> forever (receive >>= write)

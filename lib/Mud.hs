@@ -5,17 +5,15 @@ import World
 import Player
 
 import Data.Monoid
-import Data.ByteString (ByteString)
-import qualified Data.ByteString as BS
-import Network.Socket hiding (send, sendTo, recv, recvFrom)
-import Network.Socket.ByteString
 
-greeting :: Socket -> IO ()
-greeting s = do
-  send s "Welcome to the MUD!\n"
-  send s "What is your name?\n"
-  name <- recv s 1024
-  send s $ "Welcome, " <> BS.init (BS.init name) <> "!\n"
+greeting :: Communicate ()
+greeting = do
+  write "Welcome to the MUD!\n"
+  write "What is your name?\n"
+  name <- receive
+  write $ "Welcome, " <> name <> "!\n"
+  let player = Player Spawn name
+  write (show player)
 
 runMud :: Int -> IO ()
 runMud = run greeting
