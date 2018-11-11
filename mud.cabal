@@ -22,6 +22,7 @@ library
                      , bytestring
                      , mtl
                      , parsec
+                     , containers
   default-extensions:  OverloadedStrings
                      , LambdaCase
                      , DeriveFunctor

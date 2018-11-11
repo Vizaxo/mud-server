@@ -98,3 +98,5 @@ echo = do
   tell ("local count:" <> show l <> "\n")
   tell ("global count:" <> show g)
   modify (\(l, g) -> ((l+1), (g+1)))
+
+output s = tell s >> tell "\n"

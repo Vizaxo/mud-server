@@ -1,6 +1,6 @@
 module Player where
 
 data Player = Player
-  { name :: String
+  { pName :: String
   }
-  deriving (Eq, Show)
+  deriving (Eq, Ord, Show)
