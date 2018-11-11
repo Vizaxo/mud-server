@@ -62,13 +62,14 @@ greeting = do
           Go dir -> do
             output $ "Going " <> show dir
             modifyGlobalM (movePlayer p dir) CantGoThatWay
+            look p
           Help -> help
           Attack target -> attack p target
 
 who :: Mud ()
 who = do
   World players <- getGlobal
-  output ("The following players are logged in: " <> show ((fst) <$> M.toList players))
+  output ("The following players are logged in: " <> show (fst <$> M.toList players))
 
 look :: Player -> Mud ()
 look p@(Player name stats) = do
@@ -80,7 +81,7 @@ look p@(Player name stats) = do
       output "---"
       output desc
       output ("Exits: " <> showExits exits)
-      output ("Players here: " <> show (playersAtLocation l w))
+      output ("Players here: " <> show (showPlayer <$> (playersAtLocation l w)))
   where
     showExits = show . (fst <$>) . M.toList
 
