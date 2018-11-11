@@ -31,4 +31,4 @@ greeting = do
         Just location -> tell $ name <> ", you are in " <> show location
 
 runMud :: Int -> IO ()
-runMud = run NotLoggedIn (World []) greeting
+runMud = run greeting NotLoggedIn (World [])
