@@ -25,12 +25,11 @@ makeLenses ''World
 addPlayer :: Player -> Location -> World -> World
 addPlayer p l (World ps) = World (M.insert (p ^. pName) (p, l) ps)
 
-movePlayer :: Player -> Direction -> World -> World
-movePlayer p dir w@(World ps) = case M.lookup (p ^. pName) ps of
-  Nothing -> w --TODO: error reporting
-  Just (_, Location _ _ exits) -> case M.lookup dir exits of
-    Nothing -> w
-    Just l' -> set (wPlayers . ix (p ^. pName) . _2) l' w
+movePlayer :: Player -> Direction -> World -> Maybe World
+movePlayer p dir w@(World ps) = do
+  (_, Location _ _ exits) <- M.lookup (p ^. pName) ps
+  l' <- M.lookup dir exits
+  return $ set (wPlayers . ix (p ^. pName) . _2) l' w
 
 emptyWorld :: World
 emptyWorld = World M.empty

@@ -69,22 +69,22 @@ receive sock = do
   when (CBS.length msg == 0) mzero
   return (init . init . CBS.unpack $ msg)
 
-setLocal :: l -> Communicate l g ()
+setLocal :: MonadState (l, g) m => l -> m ()
 setLocal l = modify (\(_, g) -> (l, g))
 
-setGlobal :: g -> Communicate l g ()
+setGlobal :: MonadState (l, g) m => g -> m ()
 setGlobal g = modify (\(l, _) -> (l, g))
 
-getLocal :: Communicate l g l
+getLocal :: MonadState (l, g) m => m l
 getLocal = fst <$> get
 
-getGlobal :: Communicate l g g
+getGlobal :: MonadState (l, g) m => m g
 getGlobal = snd <$> get
 
-modifyLocal :: (l -> l) -> Communicate l g ()
+modifyLocal :: MonadState (l, g) m => (l -> l) -> m ()
 modifyLocal f = modify (\(l, g) -> (f l, g))
 
-modifyGlobal :: (g -> g) -> Communicate l g ()
+modifyGlobal :: MonadState (l, g) m => (g -> g) -> m ()
 modifyGlobal f = modify (\(l, g) -> (l, f g))
 
 -- | Example communicating program, which choes back what the user
@@ -99,4 +99,5 @@ echo = do
   tell ("global count:" <> show g)
   modify (\(l, g) -> ((l+1), (g+1)))
 
+output :: MonadWriter String m => String -> m ()
 output s = tell s >> tell "\n"

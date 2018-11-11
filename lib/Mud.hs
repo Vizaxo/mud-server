@@ -10,6 +10,8 @@ import World
 import Control.Lens
 import Control.Monad.Reader
 import Control.Monad.Writer
+import Control.Monad.State
+import Control.Monad.Except
 import Data.Map (Map)
 import Data.Maybe
 import qualified Data.Map as M
@@ -18,9 +20,26 @@ import Text.Parsec
 
 data ClientState = LoggedIn Player | NotLoggedIn | EnteredName
 
-type Comm a = Communicate ClientState World a
+newtype Mud a = Mud (ExceptT MudError (Communicate ClientState World) a)
+  deriving
+    ( Functor, Applicative, Monad
+    , MonadReader String , MonadWriter String, MonadState (ClientState, World)
+    , MonadError MudError
+    )
 
-greeting :: Comm ()
+runMud :: Mud a -> Communicate ClientState World ()
+runMud (Mud ma) = runExceptT ma >>= \case
+  Left e -> output $ "Error: " <> show e
+  Right x -> return ()
+
+data MudError
+  = CommandParseError ParseError
+  | InternalError
+  | AttackError CombatError
+  | CantGoThatWay
+  deriving Show
+
+greeting :: Mud ()
 greeting = do
   getLocal >>= \case
     NotLoggedIn -> do
@@ -36,26 +55,26 @@ greeting = do
       output $ "Hello, " <> name
     LoggedIn p -> do
       (parse command "" <$> ask) >>= \case
-        Left _ -> output "Sorry, I did not understand that."
+        Left e -> throwError (CommandParseError e)
         Right c -> case c of
           Who -> who
           Look -> look p
           Go dir -> do
             output $ "Going " <> show dir
-            modifyGlobal (movePlayer p dir)
+            modifyGlobalM (movePlayer p dir) CantGoThatWay
           Help -> help
           Attack target -> attack p target
 
-who :: Comm ()
+who :: Mud ()
 who = do
   World players <- getGlobal
   output ("The following players are logged in: " <> show ((fst) <$> M.toList players))
 
-look :: Player -> Comm ()
+look :: Player -> Mud ()
 look p@(Player name stats) = do
   w <- getGlobal
   case M.lookup name (w ^. wPlayers) of
-    Nothing -> output "Not found in list of logged-in players."
+    Nothing -> throwError InternalError
     Just (_, l@(Location name desc exits)) -> do
       output name
       output "---"
@@ -65,26 +84,33 @@ look p@(Player name stats) = do
   where
     showExits = show . (fst <$>) . M.toList
 
-help :: Comm ()
+help :: Mud ()
 help = output "The following commands are available: who, look, go <direction>, help, attack <target>"
 
-attack :: Player -> String -> Comm ()
+attack :: Player -> String -> Mud ()
 attack p target = do
   w <- getGlobal
   getLocation p >>= \case
-    Nothing -> output "Error"
+    Nothing -> throwError InternalError
     Just myLoc ->
       case M.lookup target (w ^. wPlayers) of
-        Nothing -> output "Error"
+        Nothing -> throwError (AttackError TargetNotFound)
         Just (t, tLoc) -> do
           if (locName tLoc == locName myLoc)
             then modifyGlobal (\(World ps) -> World (M.insert target (strike p t, tLoc) ps))
-            else output "Target is not near you"
+            else throwError (AttackError TargetNotNear)
 
-getLocation :: Player -> Comm (Maybe Location)
+getLocation :: Player -> Mud (Maybe Location)
 getLocation p = do
   w <- getGlobal
   return (snd <$> (M.lookup (p ^. pName) (w ^. wPlayers)))
 
-runMud :: Int -> IO ()
-runMud = run greeting NotLoggedIn emptyWorld
+modifyGlobalM :: (MonadError e m, MonadState (l, g) m) => (g -> Maybe g) -> e -> m ()
+modifyGlobalM f e = do
+  x <- getGlobal
+  case f x of
+    Nothing -> throwError e
+    Just x' -> setGlobal x'
+
+server :: Int -> IO ()
+server = run (runMud greeting) NotLoggedIn emptyWorld

@@ -17,7 +17,7 @@ simpleCommand = asum (mkSimple <$> [Who, Look, Help])
 -- | Make a parser from a constructor, expecting the @show@
 -- representation of it (case-insensitive).
 mkSimple :: Show a => a -> Parser a
-mkSimple x = x <$ ciString (show x)
+mkSimple x = x <$ string (map toLower (show x))
 
 go :: Parser Command
 go = Go <$> (string "go" *> some space *> direction)
@@ -35,7 +35,3 @@ attack = Attack <$> (string "attack" *> some space *> identifier)
 
 identifier :: Parser String
 identifier = some alphaNum
-
--- | A case-insensitive version of the @string@ parser.
-ciString :: String -> Parser String
-ciString = traverse (\c -> char (toLower c) <|> char (toUpper c))

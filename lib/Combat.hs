@@ -5,6 +5,11 @@ import Stats
 import Control.Lens
 import Data.Generics.Product
 
+data CombatError
+  = TargetNotFound
+  | TargetNotNear
+  deriving Show
+
 strike :: (HasType Stats a, HasType Stats d) => a -> d -> d
 strike attacker defender
   = let atk = attacker ^. getStat sStrength
