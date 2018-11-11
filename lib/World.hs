@@ -2,7 +2,9 @@ module World where
 
 import Player
 
+import Control.Lens
 import Data.Map (Map)
+import Data.Maybe
 import qualified Data.Map as M
 
 data Location = Location
@@ -12,22 +14,23 @@ data Location = Location
   }
   deriving Show
 
-data World = World
-  { players :: Map Player Location
-  }
-
 data Direction = North | South | East | West
   deriving (Eq, Ord, Show)
 
+data World = World
+  { _wPlayers :: Map String (Player, Location)
+  }
+makeLenses ''World
+
 addPlayer :: Player -> Location -> World -> World
-addPlayer p l (World ps) = World (M.insert p l ps)
+addPlayer p l (World ps) = World (M.insert (p ^. pName) (p, l) ps)
 
 movePlayer :: Player -> Direction -> World -> World
-movePlayer p dir w@(World ps) = case M.lookup p ps of
+movePlayer p dir w@(World ps) = case M.lookup (p ^. pName) ps of
   Nothing -> w --TODO: error reporting
-  Just (Location _ _ exits) -> case M.lookup dir exits of
+  Just (_, Location _ _ exits) -> case M.lookup dir exits of
     Nothing -> w
-    Just l' -> World (M.insert p l' ps)
+    Just l' -> set (wPlayers . ix (p ^. pName) . _2) l' w
 
 emptyWorld :: World
 emptyWorld = World M.empty
@@ -37,3 +40,9 @@ spawn = Location "spawn" "You are at the spawn" (M.fromList [(North, castle)])
 
 castle :: Location
 castle = Location "castle" "You are in front of a large castle." (M.fromList [(South, spawn)])
+
+targetPlayer :: String -> Traversal' World (Player, Location)
+targetPlayer name = wPlayers . ix name
+
+playersAtLocation :: Location -> World -> [Player]
+playersAtLocation loc w = w ^. wPlayers & M.elems & filter ((== locName loc) . locName . snd) & map fst

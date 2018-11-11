@@ -16,6 +16,13 @@ extra-source-files:  README.md
 library
   hs-source-dirs:      lib
   exposed-modules:     Mud
+                     , Networking
+                     , Player
+                     , World
+                     , Stats
+                     , Commands
+                     , Parser
+                     , Combat
   build-depends:       base >= 4.7 && < 5
                      , network
                      , stm
@@ -23,15 +30,21 @@ library
                      , mtl
                      , parsec
                      , containers
+                     , lens
+                     , generic-lens
   default-extensions:  OverloadedStrings
                      , LambdaCase
                      , DeriveFunctor
                      , InstanceSigs
                      , GeneralizedNewtypeDeriving
                      , ScopedTypeVariables
-  exposed-modules:     Networking
-                     , Player
-                     , World
+                     , ViewPatterns
+                     , TemplateHaskell
+                     , DeriveGeneric
+                     , DataKinds
+                     , FlexibleContexts
+                     , TypeApplications
+                     , RankNTypes
 
 executable mud
   hs-source-dirs:      src

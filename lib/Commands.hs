@@ -7,4 +7,5 @@ data Command
   | Look
   | Go Direction
   | Help
+  | Attack String
   deriving Show
