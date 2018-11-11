@@ -6,4 +6,5 @@ data Command
   = Who
   | Look
   | Go Direction
+  | Help
   deriving Show

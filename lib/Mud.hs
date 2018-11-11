@@ -13,7 +13,9 @@ import Text.Parsec
 
 data ClientState = LoggedIn Player | NotLoggedIn | EnteredName
 
-greeting :: Communicate ClientState World ()
+type Comm = Communicate ClientState World ()
+
+greeting :: Comm
 greeting = do
   getLocal >>= \case
     NotLoggedIn -> do
@@ -33,18 +35,22 @@ greeting = do
           Who -> who
           Look -> look p
           Go dir -> tell $ "Going " <> show dir
+          Help -> help
 
-who :: Communicate ClientState World ()
+who :: Comm
 who = do
   World players <- getGlobal
   tell ("The following players are logged in: " <> show ((fst) <$> players) <> "\n")
 
-look :: Player -> Communicate ClientState World ()
+look :: Player -> Comm
 look p@(Player name) = do
   World players <- getGlobal
   case lookup p players of
     Nothing -> tell "Not found in list of logged-in players."
     Just location -> tell $ name <> ", you are in " <> show location
+
+help :: Comm
+help = tell "The following commands are available: who, look, go <direction>, help"
 
 runMud :: Int -> IO ()
 runMud = run greeting NotLoggedIn (World [])
