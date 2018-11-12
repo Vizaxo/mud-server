@@ -27,8 +27,8 @@ addPlayer p l (World ps) = World (M.insert (p ^. pName) (p, l) ps)
 
 movePlayer :: Player -> Direction -> World -> Maybe World
 movePlayer p dir w@(World ps) = do
-  (_, Location _ _ exits) <- M.lookup (p ^. pName) ps
-  l' <- M.lookup dir exits
+  (_, l) <- M.lookup (p ^. pName) ps
+  l' <- M.lookup dir (exits l)
   return $ set (wPlayers . ix (p ^. pName) . _2) l' w
 
 emptyWorld :: World

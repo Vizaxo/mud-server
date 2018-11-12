@@ -48,6 +48,7 @@ extra-deps:
 - containers-0.5.11.0
 - lens-4.17
 - generic-lens-1.0.0.2
+- transformers-0.5.5.0
 
 # Override default flag values for local packages and extra-deps
 # flags: {}

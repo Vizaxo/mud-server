@@ -1,10 +1,12 @@
 module Networking where
 
+import Control.Applicative
 import Control.Concurrent
 import Control.Concurrent.STM
 import Control.Monad.Reader
 import Control.Monad.Writer hiding (listen)
 import Control.Monad.State
+import Control.Monad.Trans.Maybe
 import Data.Monoid
 
 import qualified Data.ByteString.Char8 as CBS
@@ -17,10 +19,11 @@ import Network.Socket.ByteString
 -- State l: connection-local state
 -- State g: global state
 newtype Communicate l g a = Communicate
-  { unComm :: ReaderT String (WriterT String (State (l, g))) a }
+  { unComm :: MaybeT (ReaderT String (WriterT String (State (l, g)))) a }
   deriving
     ( Functor, Applicative, Monad
     , MonadReader String , MonadWriter String, MonadState (l, g)
+    , Alternative, MonadPlus
     )
 
 -- | Run a communication program, providing the initial local and
@@ -52,13 +55,16 @@ runConn :: Socket -> Communicate l g a -> l -> TVar g -> IO ()
 runConn conn prog l global = do
   msg <- receive conn
   when (msg == ":quit") mzero
-  (l', output) <- atomically $ do
+  (l', output, continue) <- atomically $ do
     g <- readTVar global
-    let ((x, output), (l', g')) = runState (runWriterT (runReaderT (unComm prog) msg)) (l, g)
+    let ((x, output), (l', g')) = runState (runWriterT (runReaderT (runMaybeT (unComm prog)) msg)) (l, g)
     writeTVar global g'
-    return (l', output)
+    let continue = case x of
+          Nothing -> False
+          _       -> True
+    return (l', output, continue)
   write (output <> "\n") conn
-  runConn conn prog l' global
+  when continue (runConn conn prog l' global)
 
 write :: String -> Socket -> IO ()
 write str sock = void $ send sock (CBS.pack str)
@@ -101,3 +107,6 @@ echo = do
 
 output :: MonadWriter String m => String -> m ()
 output s = tell s >> tell "\n"
+
+disconnect :: MonadPlus m => m ()
+disconnect = mzero
