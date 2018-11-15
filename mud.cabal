@@ -23,6 +23,8 @@ library
                      , Commands
                      , Parser
                      , Combat
+                     , Communication
+                     , Event
   build-depends:       base >= 4.7 && < 5
                      , network
                      , stm
@@ -46,6 +48,10 @@ library
                      , FlexibleContexts
                      , TypeApplications
                      , RankNTypes
+                     , MultiParamTypeClasses
+                     , FlexibleInstances
+                     , ExistentialQuantification
+                     , TupleSections
 
 executable server
   hs-source-dirs:      src
