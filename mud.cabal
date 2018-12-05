@@ -15,16 +15,9 @@ extra-source-files:  README.md
 
 library
   hs-source-dirs:      lib
-  exposed-modules:     Mud
+  default-language:    Haskell2010
+  exposed-modules:     FRP
                      , Networking
-                     , Player
-                     , World
-                     , Stats
-                     , Commands
-                     , Parser
-                     , Combat
-                     , Communication
-                     , Event
   build-depends:       base >= 4.7 && < 5
                      , network
                      , stm
@@ -35,6 +28,8 @@ library
                      , lens
                      , generic-lens
                      , transformers
+                     , Stream
+                     , reactive-banana
   default-extensions:  OverloadedStrings
                      , LambdaCase
                      , DeriveFunctor
