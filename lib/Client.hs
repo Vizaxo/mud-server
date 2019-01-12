@@ -21,8 +21,8 @@ updateClients :: MonadState ClientPorts m => (ClientId, InputEvent) -> m ()
 updateClients (id, Connected sock) = modify (M.insert id sock)
 updateClients _ = return ()
 
-sendToClient :: (MonadIO m) => (ClientId, OutputEvent) -> ClientPorts -> m ()
-sendToClient (id, msg) ports = case M.lookup id ports of
+sendToClient :: (MonadIO m) => ClientPorts -> (ClientId, OutputEvent) -> m ()
+sendToClient ports (id, msg) = case M.lookup id ports of
   Nothing -> liftIO . print $ "Error sending message " <> show msg <> " to client " <> show id <> "\n" <> show ports
   Just socket -> write socket (show msg <> "\n")
 

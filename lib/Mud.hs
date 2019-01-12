@@ -1,14 +1,16 @@
 module Mud where
 
+import Control.Monad.State
 import Data.Text
 import Data.Monoid
-import Text.Parsec
+import Text.Parsec hiding (State)
 import Network.Socket (Socket)
 
 import Parser
 import Commands
 import Combat
 import Event
+import World
 
 data MudError
   = CommandParseError ParseError
@@ -22,8 +24,8 @@ data OutputEvent
   | OutputError MudError
   deriving Show
 
-processEvent :: InputEvent -> [OutputEvent]
-processEvent = \case
+processEvent :: (ClientId, InputEvent) -> State World [(ClientId, OutputEvent)]
+processEvent (id, ev) = pure $ (id,) <$> case ev of
   Connected sock -> do
     [Message "Welcome to the MUD!", Message "What is your name?"]
     -- setLocal EnteredName
