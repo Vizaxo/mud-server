@@ -11,7 +11,7 @@ import Client
 import Networking
 import Event
 import Mud
-import World
+import GameState
 
 -- | Set up network inputs on the given port to trigger FRP events
 networkInputEvents :: MonadIO m => Int -> m (AddHandler ClientEvent)
@@ -32,7 +32,7 @@ mkNetwork :: Int -> MomentIO ()
 mkNetwork port = do
   inputEvents <- networkInputEvents port >>= fromAddHandler
   clientPorts <- accumStateB emptyClientPorts (updateClients <$> inputEvents)
-  (outputEvents, worldState) <- mapAccum emptyWorld (runState . processEvent <$> inputEvents)
+  (outputEvents, worldState) <- mapAccum newGameState (processEvent <$> inputEvents)
 
   -- TODO: why don't the first messages send? Probably something to do with the accumulation of the state not updating in time
 

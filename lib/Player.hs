@@ -6,15 +6,14 @@ import Control.Lens
 import Data.Monoid
 import GHC.Generics
 
+type PlayerId = Int
 data Player = Player
-  { _pName :: String
+  { _pId :: PlayerId
+  , _pName :: String
   , _pStats :: Stats
   }
   deriving (Eq, Ord, Show, Generic)
 makeLenses ''Player
-
-mkPlayer :: String -> Player
-mkPlayer name = Player name defaultStats
 
 showPlayer :: Player -> String
 showPlayer p = (p ^. pName) <> " (" <> show (p ^. getStat sHitpoints) <> "hp)"

@@ -27,6 +27,7 @@ library
                      , Combat
                      , Mud
                      , Client
+                     , GameState
   build-depends:       base >= 4.7 && < 5
                      , network
                      , stm
@@ -57,6 +58,8 @@ library
                      , FlexibleInstances
                      , ExistentialQuantification
                      , TupleSections
+                     , KindSignatures
+                     , ConstraintKinds
 
 executable server
   hs-source-dirs:      src

@@ -1,7 +1,12 @@
 module Mud where
 
+import Control.Arrow
 import Control.Monad.State
+import Control.Monad.Reader
+import Control.Monad.Writer
+import Control.Lens
 import Data.Text
+import Data.Map as M
 import Data.Monoid
 import Text.Parsec hiding (State)
 import Network.Socket (Socket)
@@ -11,6 +16,7 @@ import Commands
 import Combat
 import Event
 import World
+import GameState
 
 data MudError
   = CommandParseError ParseError
@@ -24,31 +30,56 @@ data OutputEvent
   | OutputError MudError
   deriving Show
 
-processEvent :: (ClientId, InputEvent) -> State World [(ClientId, OutputEvent)]
-processEvent (id, ev) = pure $ (id,) <$> case ev of
-  Connected sock -> do
-    [Message "Welcome to the MUD!", Message "What is your name?"]
-    -- setLocal EnteredName
-  {-
-  EnteredName -> do
-    name <- ask
-    let player = mkPlayer name
-    setLocal (LoggedIn player)
-    modifyGlobal (addPlayer player spawn)
-    output $ "Hello, " <> name
--}
-  Sent msg ->
-    case (parse command "" msg) of
-      Left e -> [OutputError (CommandParseError e)]
-      Right c -> case c of
-        Who -> [Message "who"]
-        Look -> [Message "look"]
-        Go dir ->
-          [Message $ "Going " <> pack (show dir)]
-          --modifyGlobalM (movePlayer p dir) CantGoThatWay
-          --look p
-        Help -> [Message "help"]
-        Attack target -> [Message $ "attack " <> pack (show target)]--attack p target
+type Messages = [(ClientId, OutputEvent)]
+
+processEvent :: (ClientId, InputEvent) -> GameState -> ([(ClientId, OutputEvent)], GameState)
+processEvent (cId, ev) = runState $ flip runReaderT cId $ execWriterT $ processEvent' ev
+
+processEvent' :: (MonadReader ClientId m, MonadState GameState m, MonadWriter Messages m) => InputEvent -> m ()
+processEvent' (Connected sock) = do
+      reply "Welcome to the MUD!"
+      reply "What is your name?"
+      cId <- ask
+      modify (over gsPlayers (M.insert cId EnteringName))
+processEvent' (Sent msg) = do
+  cId <- ask
+  worldState <- get
+  case M.lookup cId (view gsPlayers worldState) of
+    Nothing -> clientError InternalError
+    Just s -> case s of
+      EnteringName -> do
+        cId <- ask
+        pId <- freshPId
+        modify (over gsPlayers (M.insert cId (InGame pId)))
+      InGame pId -> case (parse command "" msg) of
+        Left e -> clientError (CommandParseError e)
+        Right c -> case c of
+          Who -> reply "who"
+          Look -> reply "look"
+          Go dir ->
+            reply $ "Going " <> pack (show dir)
+            --modifyGlobalM (movePlayer p dir) CantGoThatWay
+            --look p
+          Help -> reply "help"
+          Attack target -> reply $ "attack " <> pack (show target)--attack p target
+    {-
+    EnteredName -> do
+      name <- ask
+      let player = mkPlayer name
+      setLocal (LoggedIn player)
+      modifyGlobal (addPlayer player spawn)
+      output $ "Hello, " <> name
+  -}
+
+reply :: (MonadReader ClientId m, MonadWriter Messages m) => Text -> m ()
+reply msg = do
+  cId <- ask
+  tell [(cId, Message msg)]
+
+clientError :: (MonadReader ClientId m, MonadWriter Messages m) => MudError -> m ()
+clientError err = do
+  cId <- ask
+  tell [(cId, OutputError err)]
 
 {-
 playerDied :: Mud ()
