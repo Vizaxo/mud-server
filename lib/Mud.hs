@@ -49,8 +49,8 @@ processEvent' (Connected sock) = welcomeMessage
 processEvent' Disconnected = return ()
 processEvent' (Sent msg) = do
   cId <- ask
-  worldState <- get
-  case M.lookup cId (view gsPlayers worldState) of
+  gs <- get
+  case M.lookup cId (gs ^. gsPlayers) of
     Nothing -> clientError InternalError
     Just s -> case s of
       EnteringName -> do
@@ -63,10 +63,17 @@ processEvent' (Sent msg) = do
         Right c -> case c of
           Who -> who
           Look -> look pId
-          Go dir ->
+          Go dir -> do
             reply $ "Going " <> pack (show dir)
-            --modifyGlobalM (movePlayer p dir) CantGoThatWay
-            --look p
+            let w = gs ^. gsWorld
+            return ()
+            case M.lookup pId (w ^. wPlayers) of
+              Nothing -> clientError InternalError
+              Just (p, l) -> case movePlayer p dir w of
+                Nothing -> clientError CantGoThatWay
+                Just w -> do
+                  modify (set gsWorld w)
+                  look pId
           Help -> reply "help"
           Attack target -> attack pId target
 
