@@ -1,4 +1,4 @@
-module Parser (command) where
+module Parser (command, playerName) where
 
 import Commands
 import World
@@ -8,9 +8,11 @@ import Data.Char
 import Data.Foldable
 import Text.Parsec
 import Text.Parsec.String
+import Text.Parsec.Char
+
 
 command :: Parser Command
-command = (simpleCommand <|> go <|> attack) <* eof
+command = (try simpleCommand <|> try go <|> try attack <|> whisper) <* eof
 
 simpleCommand = asum (mkSimple <$> [Who, Look, Help, Logout])
 
@@ -31,7 +33,10 @@ direction = north <|> south <|> east <|> west
     west  = West <$ string "west"
 
 attack :: Parser Command
-attack = Attack <$> (string "attack" *> some space *> identifier)
+attack = Attack <$> (string "attack" *> some space *> playerName)
 
-identifier :: Parser String
-identifier = some alphaNum
+whisper :: Parser Command
+whisper = Whisper <$> (string "whisper" *> some space *> playerName) <*> many anyChar
+
+playerName :: Parser String
+playerName = (:) <$> letter <*> many alphaNum

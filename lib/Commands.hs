@@ -9,4 +9,5 @@ data Command
   | Help
   | Attack String
   | Logout
+  | Whisper String String
   deriving Show

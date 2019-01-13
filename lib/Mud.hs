@@ -8,7 +8,7 @@ import Control.Lens
 import Data.Text
 import Data.Map as M
 import Data.Monoid
-import Text.Parsec (parse, ParseError (..))
+import Text.Parsec (parse, ParseError (..), eof)
 import Network.Socket (Socket)
 
 import Parser
@@ -25,6 +25,8 @@ data MudError
   | InternalError
   | AttackError CombatError
   | CantGoThatWay
+  | InvalidName
+  | WhisperTargetNotFound
   deriving Show
 
 data OutputEvent
@@ -54,9 +56,12 @@ processEvent' (Sent msg) = do
     Nothing -> clientError InternalError
     Just s -> case s of
       EnteringName -> do
-        pId <- freshPId
-        modify (over gsPlayers (M.insert cId (InGame pId)))
-        modify (over (gsWorld . wPlayers) (M.insert pId (Player pId msg defaultStats, spawn)))
+        case parse (playerName <* eof) "" msg of
+          Left e -> clientError InvalidName
+          Right name -> do
+            pId <- freshPId
+            modify (over gsPlayers (M.insert cId (InGame pId)))
+            modify (over (gsWorld . wPlayers) (M.insert pId (Player pId name defaultStats, spawn)))
       InGame pId -> case (parse command "" msg) of
         Left e -> clientError (CommandParseError e)
         Right c -> case c of
@@ -76,6 +81,11 @@ processEvent' (Sent msg) = do
           Help -> reply "help"
           Attack target -> attack pId target
           Logout -> sendToCurrentClient Disconnect
+          Whisper target whisperMsg -> do
+            let w = gs ^. gsWorld
+            case targetPlayer target w of
+              Nothing -> clientError WhisperTargetNotFound
+              Just (t, l) -> sendToPlayer (t ^. playerId) (Message $ "Message received: " <> pack whisperMsg)
   newline
 
 newline :: MonadMud m => m ()
@@ -115,7 +125,7 @@ clientError = sendToCurrentClient . OutputError
 who :: MonadMud m => m ()
 who = do
   players <- (^. gsWorld . wPlayers) <$> get
-  reply ("The following players are logged in: " <> (pack $ show $ M.toList players))
+  reply ("The following players are logged in: " <> (pack $ show $ view (_1 . pName) <$> M.elems players))
 
 look :: MonadMud m => PlayerId -> m ()
 look pId = do
