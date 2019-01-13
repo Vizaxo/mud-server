@@ -19,7 +19,7 @@ networkInputEvents port = liftIO $ do
   sock <- setupSocket port
   (addHandler, fire) <- newAddHandler
   forkIO $ void $ flip runStateT 0 $ forever $ do
-    clientId <- getClientId
+    clientId <- freshClientId
     (conn, _) <- liftIO $ accept sock
     liftIO $ fire (clientId, Connected conn)
     liftIO $ flip forkFinally (const $ fire (clientId, Disconnected) *> close conn) $ forever $ do
@@ -27,7 +27,7 @@ networkInputEvents port = liftIO $ do
       fire (clientId, Sent msg)
   return addHandler
 
--- | Describe the FRP network
+-- | Connect the FRP network
 mkNetwork :: Int -> MomentIO ()
 mkNetwork port = do
   inputEvents <- networkInputEvents port >>= fromAddHandler
@@ -55,6 +55,5 @@ zipTuple (x, ys) = (x,) <$> ys
 runServer :: Int -> IO ()
 runServer port = do
   compile (mkNetwork port) >>= actuate
-
   -- Keep the program open
   readLn

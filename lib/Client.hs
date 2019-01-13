@@ -14,8 +14,8 @@ type ClientPorts = Map ClientId Socket
 
 emptyClientPorts = M.empty
 
-getClientId :: MonadState ClientId m => m ClientId
-getClientId = get <* modify (+1)
+freshClientId :: MonadState ClientId m => m ClientId
+freshClientId = get <* modify (+1)
 
 updateClients :: MonadState ClientPorts m => (ClientId, InputEvent) -> m ()
 updateClients (id, Connected sock) = modify (M.insert id sock)
@@ -24,7 +24,9 @@ updateClients _ = return ()
 sendToClient :: (MonadIO m) => ClientPorts -> (ClientId, OutputEvent) -> m ()
 sendToClient ports (id, msg) = case M.lookup id ports of
   Nothing -> liftIO . print $ "Error sending message " <> show msg <> " to client " <> show id <> "\n" <> show ports
-  Just socket -> write socket (show msg <> "\n")
+  Just socket -> case msg of
+    Disconnect -> liftIO $ close socket
+    msg' -> write socket (show msg <> "\n")
 
 runClientPorts :: Monad m => StateT ClientPorts m a -> m a
 runClientPorts = flip evalStateT M.empty

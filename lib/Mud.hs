@@ -12,6 +12,8 @@ import Text.Parsec hiding (State)
 import Network.Socket (Socket)
 
 import Parser
+import Player
+import Stats
 import Commands
 import Combat
 import Event
@@ -28,19 +30,23 @@ data MudError
 data OutputEvent
   = Message Text
   | OutputError MudError
+  | Disconnect
   deriving Show
 
 type Messages = [(ClientId, OutputEvent)]
 
+-- | A convenient type synonym for the monadic operations the Mud supports
+type MonadMud m = (MonadReader ClientId m, MonadState GameState m, MonadWriter Messages m)
+
+-- | The pure version of @processEvent'@, which is used in the FRP module.
 processEvent :: (ClientId, InputEvent) -> GameState -> ([(ClientId, OutputEvent)], GameState)
 processEvent (cId, ev) = runState $ flip runReaderT cId $ execWriterT $ processEvent' ev
 
-processEvent' :: (MonadReader ClientId m, MonadState GameState m, MonadWriter Messages m) => InputEvent -> m ()
-processEvent' (Connected sock) = do
-      reply "Welcome to the MUD!"
-      reply "What is your name?"
-      cId <- ask
-      modify (over gsPlayers (M.insert cId EnteringName))
+-- | Process a client's message. This can update the game state,
+-- and/or send messages to any of the clients.
+processEvent' :: MonadMud m => InputEvent -> m ()
+processEvent' (Connected sock) = welcomeMessage
+processEvent' Disconnected = return ()
 processEvent' (Sent msg) = do
   cId <- ask
   worldState <- get
@@ -48,87 +54,99 @@ processEvent' (Sent msg) = do
     Nothing -> clientError InternalError
     Just s -> case s of
       EnteringName -> do
-        cId <- ask
         pId <- freshPId
         modify (over gsPlayers (M.insert cId (InGame pId)))
+        modify (over (gsWorld . wPlayers) (M.insert pId (Player pId msg defaultStats, spawn)))
+        -- set the player's name (stored in msg)
       InGame pId -> case (parse command "" msg) of
         Left e -> clientError (CommandParseError e)
         Right c -> case c of
-          Who -> reply "who"
-          Look -> reply "look"
+          Who -> who
+          Look -> look pId
           Go dir ->
             reply $ "Going " <> pack (show dir)
             --modifyGlobalM (movePlayer p dir) CantGoThatWay
             --look p
           Help -> reply "help"
-          Attack target -> reply $ "attack " <> pack (show target)--attack p target
-    {-
-    EnteredName -> do
-      name <- ask
-      let player = mkPlayer name
-      setLocal (LoggedIn player)
-      modifyGlobal (addPlayer player spawn)
-      output $ "Hello, " <> name
-  -}
+          Attack target -> attack pId target
 
+-- | Send a welcome message when a new client connects
+welcomeMessage :: MonadMud m => m ()
+welcomeMessage = do
+  reply "Welcome to the MUD!"
+  reply "What is your name?"
+  cId <- ask
+  modify (over gsPlayers (M.insert cId EnteringName))
+
+-- | Send an event to the current client (the current client is the
+-- one which sent the message being responded to)
+sendToCurrentClient :: (MonadReader ClientId m, MonadWriter Messages m) => OutputEvent -> m ()
+sendToCurrentClient ev = do
+  cId <- ask
+  tell [(cId, ev)]
+
+sendToPlayer :: MonadMud m => PlayerId -> OutputEvent -> m ()
+sendToPlayer targetId ev = do
+  gs <- get
+  let w = gs ^. gsWorld
+  case getClientId gs targetId of
+    Nothing -> clientError InternalError
+    Just cId -> tell [(cId, ev)]
+
+-- | Reply to the current client with a text message
 reply :: (MonadReader ClientId m, MonadWriter Messages m) => Text -> m ()
-reply msg = do
-  cId <- ask
-  tell [(cId, Message msg)]
+reply = sendToCurrentClient . Message
 
+-- | Send an error to the current client
 clientError :: (MonadReader ClientId m, MonadWriter Messages m) => MudError -> m ()
-clientError err = do
-  cId <- ask
-  tell [(cId, OutputError err)]
+clientError = sendToCurrentClient . OutputError
 
-{-
-playerDied :: Mud ()
-playerDied = do
-  output "You have died. Goodbye."
-  disconnect
-
-who :: Mud ()
+who :: MonadMud m => m ()
 who = do
-  World players <- getGlobal
-  output ("The following players are logged in: " <> show (fst <$> M.toList players))
+  players <- (^. gsWorld . wPlayers) <$> get
+  reply ("The following players are logged in: " <> (pack $ show $ M.toList players))
 
-look :: Player -> Mud ()
-look p@(Player name stats) = do
-  w <- getGlobal
-  case M.lookup name (w ^. wPlayers) of
-    Nothing -> throwError InternalError
+look :: MonadMud m => PlayerId -> m ()
+look pId = do
+  w <- (^. gsWorld) <$> get
+  case M.lookup pId (w ^. wPlayers) of
+    Nothing -> clientError InternalError
     Just (_, l) -> do
-      output (locName l)
-      output "---"
-      output (description l)
-      output ("Exits: " <> showExits (exits l))
-      output ("Players here: " <> show (showPlayer <$> (playersAtLocation l w)))
+      reply (locName l)
+      reply "---"
+      reply (description l)
+      reply ("Exits: " <> showExits (exits l))
+      reply ("Players here: " <> pack (show (showPlayer <$> (playersAtLocation l w))))
   where
-    showExits = show . (fst <$>) . M.toList
+    showExits = pack . show . (fst <$>) . M.toList
 
-help :: Mud ()
-help = output "The following commands are available: who, look, go <direction>, help, attack <target>"
+help :: MonadMud m => m ()
+help = reply "The following commands are available: who, look, go <direction>, help, attack <target>"
 
-attack :: Player -> String -> Mud ()
-attack p target = do
-  w <- getGlobal
-  getLocation p >>= \case
-    Nothing -> throwError InternalError
-    Just myLoc ->
-      case M.lookup target (w ^. wPlayers) of
-        Nothing -> throwError (AttackError TargetNotFound)
-        Just (t, tLoc) -> do
-          if (locName tLoc == locName myLoc)
-            then do
-              w <- getGlobal
-              case strike p t of
-                Just p' -> setGlobal (World $ M.insert target (p', tLoc) (w ^. wPlayers))
-                Nothing -> do
-                  setGlobal (World $ sans target (w ^. wPlayers))
-            else throwError (AttackError TargetNotNear)
+attack :: MonadMud m => PlayerId -> String -> m ()
+attack pId target = do
+  w <- (^. gsWorld) <$> get
+  --TODO: better (monadic) error handling
+  case M.lookup pId (w ^. wPlayers) of
+    Nothing -> clientError InternalError
+    Just (p, loc) -> getLocation pId >>= \case
+      Nothing -> clientError InternalError
+      Just myLoc ->
+        case targetPlayer target w of
+          Nothing -> clientError (AttackError TargetNotFound)
+          Just (t, tLoc) -> do
+            if (locName tLoc == locName myLoc)
+              then do
+                case strike p t of
+                  Just t' -> do
+                    modify (over (gsWorld . wPlayers) (M.insert (t ^. playerId) (t', tLoc)))
+                    sendToPlayer (t ^. playerId) (Message "you've been attacked")
+                  Nothing -> do
+                    sendToPlayer (t ^. playerId) Disconnect
+                    modify (over (gsWorld . wPlayers) (sans (t ^. playerId)))
+              else clientError (AttackError TargetNotNear)
 
-getLocation :: Player -> Mud (Maybe Location)
-getLocation p = do
-  w <- getGlobal
-  return (snd <$> (M.lookup (p ^. pName) (w ^. wPlayers)))
--}
+getLocation :: MonadMud m => PlayerId -> m (Maybe Location)
+getLocation pId = do
+  players <- (^. gsWorld . wPlayers) <$> get
+  return (snd <$> (M.lookup pId players))

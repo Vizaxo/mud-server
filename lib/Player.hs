@@ -8,7 +8,7 @@ import GHC.Generics
 
 type PlayerId = Int
 data Player = Player
-  { _pId :: PlayerId
+  { _playerId :: PlayerId
   , _pName :: String
   , _pStats :: Stats
   }

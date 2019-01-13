@@ -16,6 +16,7 @@ data GameState = GameState
   }
 
 data ClientState = EnteringName | InGame PlayerId
+makePrisms ''ClientState
 
 newGameState :: GameState
 newGameState = GameState emptyWorld M.empty 0
@@ -33,3 +34,6 @@ makeLenses ''GameState
 
 freshPId :: MonadState GameState m => m PlayerId
 freshPId = overState gsNextPlayerId $ get <* modify (+1)
+
+getClientId :: GameState -> PlayerId -> Maybe ClientId
+getClientId gs pId = M.elems (gs ^. gsPlayers) ^? each . _InGame
