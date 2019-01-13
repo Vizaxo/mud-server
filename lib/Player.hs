@@ -12,7 +12,7 @@ data Player = Player
   , _pName :: String
   , _pStats :: Stats
   }
-  deriving (Eq, Ord, Show, Generic)
+  deriving (Eq, Ord, Show, Read, Generic)
 makeLenses ''Player
 
 showPlayer :: Player -> String

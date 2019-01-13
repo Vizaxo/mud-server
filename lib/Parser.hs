@@ -1,6 +1,7 @@
 module Parser (command, playerName) where
 
 import Commands
+import Utils
 import World
 
 import Control.Applicative (some)
@@ -15,11 +16,6 @@ command :: Parser Command
 command = (try simpleCommand <|> try go <|> try attack <|> whisper) <* eof
 
 simpleCommand = asum (mkSimple <$> [Who, Look, Help, Logout])
-
--- | Make a parser from a constructor, expecting the @show@
--- representation of it (case-insensitive).
-mkSimple :: Show a => a -> Parser a
-mkSimple x = x <$ string (map toLower (show x))
 
 go :: Parser Command
 go = Go <$> (string "go" *> some space *> direction)

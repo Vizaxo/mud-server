@@ -12,6 +12,8 @@ import Networking
 import Event
 import Mud
 import GameState
+import LoadSave
+import ConsoleControl
 
 -- | Set up network inputs on the given port to trigger FRP events
 networkInputEvents :: MonadIO m => Int -> m (AddHandler ClientEvent)
@@ -28,13 +30,16 @@ networkInputEvents port = liftIO $ do
   return addHandler
 
 -- | Connect the FRP network
-mkNetwork :: Int -> MomentIO ()
-mkNetwork port = do
+mkNetwork :: Int -> GameState -> AddHandler ConsoleEvent -> MomentIO ()
+mkNetwork port initialGameState consoleEventHandler = do
   inputEvents <- networkInputEvents port >>= fromAddHandler
   clientPorts <- accumStateB emptyClientPorts (updateClients <$> inputEvents)
-  (outputEvents, worldState) <- mapAccum newGameState (processEvent <$> inputEvents)
+  (outputEvents, worldState) <- mapAccum initialGameState (processEvent <$> inputEvents)
 
   -- TODO: why don't the first messages send? Probably something to do with the accumulation of the state not updating in time
+
+  consoleEvents <- (processConsoleEvent <$>) <$> fromAddHandler consoleEventHandler
+  reactimate $ sequence_ <$> applyAtTime (liftA2 handleConsoleProcess) (pure <$> worldState) consoleEvents
 
   -- Trigger the output events to send to the client
   reactimate $ sequence_ <$> applyAtTime (liftA2 sendToClient) (pure <$> clientPorts) outputEvents
@@ -54,6 +59,9 @@ zipTuple (x, ys) = (x,) <$> ys
 -- | Run the game server on the given port
 runServer :: Int -> IO ()
 runServer port = do
-  compile (mkNetwork port) >>= actuate
-  -- Keep the program open
-  readLn
+  (consoleEventHandler, fireConsoleEvent) <- newAddHandler
+  loadOrCreateSave >>= \case
+    Left e -> putStrLn "Error: file 'world' is corrupt"
+    Right initialGameState -> do
+      compile (mkNetwork port initialGameState consoleEventHandler) >>= actuate
+      forever $ fireConsoleEvent . ConsoleMessage =<< getLine

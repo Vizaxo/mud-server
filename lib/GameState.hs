@@ -14,8 +14,10 @@ data GameState = GameState
   , _gsPlayers :: Map ClientId ClientState
   , _gsNextPlayerId :: Int
   }
+  deriving (Show, Read)
 
 data ClientState = EnteringName | InGame PlayerId
+  deriving (Show, Read)
 makePrisms ''ClientState
 
 newGameState :: GameState

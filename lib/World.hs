@@ -15,16 +15,20 @@ data Location = Location
   , description :: Text
   , exits :: Map Direction Location
   }
+  deriving Read
+
+--TODO: need custom serialisation for read and show of location?
 
 instance Show Location where
   show (Location name desc exits) = "Location " <> show name <> " " <> show desc
 
 data Direction = North | South | East | West
-  deriving (Eq, Ord, Show)
+  deriving (Eq, Ord, Show, Read)
 
 data World = World
   { _wPlayers :: Map PlayerId (Player, Location)
   }
+  deriving (Show, Read)
 makeLenses ''World
 
 addPlayer :: Player -> Location -> World -> World

@@ -9,7 +9,7 @@ data Stat = Stat
   { _sBase :: Int
   , _sAdjusted :: Int
   }
-  deriving (Eq, Ord, Show)
+  deriving (Eq, Ord, Show, Read)
 makeLenses ''Stat
 
 data Stats = Stats
@@ -17,7 +17,7 @@ data Stats = Stats
   , _sStrength :: Stat
   , _sDefence :: Stat
   }
-  deriving (Eq, Ord, Show, Generic)
+  deriving (Eq, Ord, Show, Read, Generic)
 makeLenses ''Stats
 
 level :: Int -> Stat
