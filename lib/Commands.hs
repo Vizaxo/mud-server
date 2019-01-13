@@ -8,4 +8,5 @@ data Command
   | Go Direction
   | Help
   | Attack String
+  | Logout
   deriving Show

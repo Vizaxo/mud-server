@@ -12,7 +12,7 @@ import Text.Parsec.String
 command :: Parser Command
 command = (simpleCommand <|> go <|> attack) <* eof
 
-simpleCommand = asum (mkSimple <$> [Who, Look, Help])
+simpleCommand = asum (mkSimple <$> [Who, Look, Help, Logout])
 
 -- | Make a parser from a constructor, expecting the @show@
 -- representation of it (case-insensitive).

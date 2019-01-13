@@ -4,6 +4,7 @@ import Control.Monad.State
 import qualified Data.Map as M
 import Data.Map (Map)
 import Data.Monoid
+import Data.Text
 import Network.Socket hiding (send, sendTo, recv, recvFrom, Connected)
 
 import Event
@@ -26,7 +27,8 @@ sendToClient ports (id, msg) = case M.lookup id ports of
   Nothing -> liftIO . print $ "Error sending message " <> show msg <> " to client " <> show id <> "\n" <> show ports
   Just socket -> case msg of
     Disconnect -> liftIO $ close socket
-    msg' -> write socket (show msg <> "\n")
+    Message msg' -> write socket (unpack msg' <> "\n")
+    OutputError err -> write socket ("Error: " <> show err)
 
 runClientPorts :: Monad m => StateT ClientPorts m a -> m a
 runClientPorts = flip evalStateT M.empty

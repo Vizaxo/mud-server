@@ -1,6 +1,7 @@
 module World where
 
 import Player
+import Utils
 
 import Control.Lens
 import Data.Map (Map)
@@ -42,10 +43,19 @@ spawn :: Location
 spawn = Location "spawn" "You are at the spawn" (M.fromList [(North, castle)])
 
 castle :: Location
-castle = Location "castle" "You are in front of a large castle." (M.fromList [(South, spawn)])
+castle = Location "castle" "You are in front of a large castle." (M.fromList [(South, spawn), (East, tunnelOfDoomEntrance)])
 
 targetPlayer :: String -> World -> Maybe (Player, Location)
 targetPlayer name w = lookup name $ (\(p, l) -> (p ^. pName, (p, l))) <$> M.elems (w ^. wPlayers)
 
 playersAtLocation :: Location -> World -> [Player]
 playersAtLocation loc w = w ^. wPlayers & M.elems & filter ((== locName loc) . locName . snd) & map fst
+
+tunnelOfDoomEntrance :: Location
+tunnelOfDoomEntrance = Location "Tunnel of Doom entrance" "You look upon a tunnel of doom. Dare ye enter?" (M.fromList [(West, castle), (North, tunnelOfDoom 0)])
+
+tunnelOfDoom :: Int -> Location
+tunnelOfDoom n = Location ("Tunnel of Doom, room " <> showT n) ("You are in room " <> showT n <> " of the Tunnel of Doom. It is very dark.") (M.fromList [(South, southExit), (North, tunnelOfDoom (n+1))])
+  where
+    southExit | n == 0 = tunnelOfDoomEntrance
+              | otherwise = tunnelOfDoom (n-1)
