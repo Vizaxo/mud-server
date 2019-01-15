@@ -15,18 +15,14 @@ import Text.Parsec.Char
 command :: Parser Command
 command = (try simpleCommand <|> try go <|> try attack <|> whisper) <* eof
 
+simpleCommand :: Parser Command
 simpleCommand = asum (mkSimple <$> [Who, Look, Help, Logout])
 
 go :: Parser Command
 go = Go <$> (string "go" *> some space *> direction)
 
 direction :: Parser Direction
-direction = north <|> south <|> east <|> west
-  where
-    north = North <$ string "north"
-    south = South <$ string "south"
-    east  = East <$ string "east"
-    west  = West <$ string "west"
+direction = asum (mkSimple <$> [North, South, East, West])
 
 attack :: Parser Command
 attack = Attack <$> (string "attack" *> some space *> playerName)

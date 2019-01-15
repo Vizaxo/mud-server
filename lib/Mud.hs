@@ -78,7 +78,7 @@ processEvent' (Sent msg) = do
                 Just w -> do
                   modify (set gsWorld w)
                   look pId
-          Help -> reply "help"
+          Help -> help
           Attack target -> attack pId target
           Logout -> sendToCurrentClient Disconnect
           Whisper target whisperMsg -> do

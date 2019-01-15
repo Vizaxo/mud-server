@@ -1,0 +1,11 @@
+# README
+
+## Code hierachy
+
+### /lib
+
+/lib contains the majority of the code for the game
+
+### /src/Main.hs
+
+/src/Main.hs is the executable code. This is just a wrapper around `runServer` from `/lib/FRP.hs`, which gets the port from the command-line argument (or uses 8080 as a default if none was provided).

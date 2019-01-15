@@ -32,14 +32,16 @@ networkInputEvents port = liftIO $ do
 -- | Connect the FRP network
 mkNetwork :: Int -> GameState -> AddHandler ConsoleEvent -> MomentIO ()
 mkNetwork port initialGameState consoleEventHandler = do
+  -- Receive and process network events
   inputEvents <- networkInputEvents port >>= fromAddHandler
   clientPorts <- accumStateB emptyClientPorts (updateClients <$> inputEvents)
-  (outputEvents, worldState) <- mapAccum initialGameState (processEvent <$> inputEvents)
+  (outputEvents, gameState) <- mapAccum initialGameState (processEvent <$> inputEvents)
 
   -- TODO: why don't the first messages send? Probably something to do with the accumulation of the state not updating in time
 
+  -- Receive and process console events
   consoleEvents <- (processConsoleEvent <$>) <$> fromAddHandler consoleEventHandler
-  reactimate $ sequence_ <$> applyAtTime (liftA2 handleConsoleProcess) (pure <$> worldState) consoleEvents
+  reactimate $ sequence_ <$> applyAtTime (liftA2 handleConsoleProcess) (pure <$> gameState) consoleEvents
 
   -- Trigger the output events to send to the client
   reactimate $ sequence_ <$> applyAtTime (liftA2 sendToClient) (pure <$> clientPorts) outputEvents
