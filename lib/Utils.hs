@@ -20,3 +20,6 @@ withError f = liftEither . first f
 
 maybeThrow :: MonadError e m => e -> Maybe a -> m a
 maybeThrow e = maybe (throwError e) return
+
+rightToJust :: Either a b -> Maybe b
+rightToJust = either (const Nothing) Just
