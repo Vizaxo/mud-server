@@ -12,7 +12,6 @@ import Networking
 import Event
 import Mud
 import GameState
-import LoadSave
 import ConsoleControl
 
 -- | Set up network inputs on the given port to trigger FRP events
@@ -62,8 +61,5 @@ zipTuple (x, ys) = (x,) <$> ys
 runServer :: Int -> IO ()
 runServer port = do
   (consoleEventHandler, fireConsoleEvent) <- newAddHandler
-  loadOrCreateSave >>= \case
-    Left e -> putStrLn "Error: file 'world' is corrupt"
-    Right initialGameState -> do
-      compile (mkNetwork port initialGameState consoleEventHandler) >>= actuate
-      forever $ fireConsoleEvent . ConsoleMessage =<< getLine
+  compile (mkNetwork port newGameState consoleEventHandler) >>= actuate
+  forever $ fireConsoleEvent . ConsoleMessage =<< getLine
