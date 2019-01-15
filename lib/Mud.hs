@@ -54,6 +54,8 @@ processEvent' (Sent msg) = do
       pId <- freshPId
       modify (over gsPlayers (M.insert cId (InGame pId)))
       modify (over (gsWorld . wPlayers) (M.insert pId (Player pId name defaultStats, spawn)))
+      reply $ "Welcome, " <> pack name
+      reply "Type help to show the available commands"
     InGame pId -> withError CommandParseError (parse command "" msg) >>= \case
         Who -> who
         Look -> look pId
