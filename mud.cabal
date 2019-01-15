@@ -29,7 +29,6 @@ library
                      , Client
                      , GameState
                      , ConsoleControl
-                     , LoadSave
                      , Utils
   build-depends:       base >= 4.7 && < 5
                      , network

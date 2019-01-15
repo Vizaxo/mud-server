@@ -44,12 +44,11 @@ sendErrors m = runExceptT m >>= \case
 -- and/or send messages to any of the clients.
 processEvent' :: MonadMud m => InputEvent -> m ()
 processEvent' (Connected sock) = welcomeMessage
-processEvent' Disconnected = return ()
+processEvent' Disconnected = return () --TODO: remove player from world
 processEvent' (Sent msg) = do
   cId <- ask
   gs <- get
-  clientState <- maybeThrow InternalError (M.lookup cId (gs ^. gsPlayers))
-  case clientState of
+  maybeThrow InternalError (M.lookup cId (gs ^. gsPlayers)) >>= \case
     EnteringName -> do
       name <- withError InvalidName (parse (playerName <* eof) "" msg)
       pId <- freshPId
@@ -74,6 +73,7 @@ processEvent' (Sent msg) = do
           sendToPlayer (t ^. playerId) (Message $ "Message received: " <> pack whisperMsg)
   newline
 
+-- | Send a blank line to the current client
 newline :: MonadMud m => m ()
 newline = reply ""
 

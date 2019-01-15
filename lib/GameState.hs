@@ -27,8 +27,7 @@ newGameState = GameState emptyWorld M.empty 0
 overState :: MonadState s m => Lens' s t -> State t a -> m a
 overState lens st = do
   s <- get
-  let t = view lens s
-  let (x, t') = runState st t
+  let (x, t') = runState st (view lens s)
   put (set lens t' s)
   return x
 

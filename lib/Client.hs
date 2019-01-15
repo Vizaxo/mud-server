@@ -28,7 +28,7 @@ sendToClient ports (id, msg) = case M.lookup id ports of
   Just socket -> case msg of
     Disconnect -> liftIO $ close socket
     Message msg' -> write socket (unpack msg' <> "\n")
-    OutputError err -> write socket ("Error: " <> show err)
+    OutputError err -> write socket ("Error: " <> show err <> "\n")
 
 runClientPorts :: Monad m => StateT ClientPorts m a -> m a
 runClientPorts = flip evalStateT M.empty
