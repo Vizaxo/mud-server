@@ -1,6 +1,7 @@
 module GameState where
 
 import Data.Map (Map)
+import Data.Maybe
 import qualified Data.Map as M
 import Control.Lens
 import Control.Monad.State
@@ -37,4 +38,7 @@ freshPId :: MonadState GameState m => m PlayerId
 freshPId = overState gsNextPlayerId $ get <* modify (+1)
 
 getClientId :: GameState -> PlayerId -> Maybe ClientId
-getClientId gs pId = M.elems (gs ^. gsPlayers) ^? each . _InGame
+getClientId gs pId = listToMaybe $ mapMaybe filterPId $ M.toList (gs ^. gsPlayers)
+  where
+    filterPId (cId, InGame pId') | pId == pId' = Just cId
+    filterPId _                                = Nothing
