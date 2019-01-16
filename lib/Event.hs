@@ -25,4 +25,3 @@ data OutputEvent
   deriving Show
 
 type ClientId = Int
-type ClientEvent = (ClientId, InputEvent)

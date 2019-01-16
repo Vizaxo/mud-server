@@ -13,6 +13,7 @@ import Mud
 
 type ClientPorts = Map ClientId Socket
 
+emptyClientPorts :: ClientPorts
 emptyClientPorts = M.empty
 
 freshClientId :: MonadState ClientId m => m ClientId

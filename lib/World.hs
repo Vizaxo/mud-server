@@ -17,8 +17,6 @@ data Location = Location
   }
   deriving Read
 
---TODO: need custom serialisation for read and show of location?
-
 instance Show Location where
   show (Location name desc exits) = "Location " <> show name <> " " <> show desc
 
@@ -56,10 +54,16 @@ playersAtLocation :: Location -> World -> [Player]
 playersAtLocation loc w = w ^. wPlayers & M.elems & filter ((== locName loc) . locName . snd) & map fst
 
 tunnelOfDoomEntrance :: Location
-tunnelOfDoomEntrance = Location "Tunnel of Doom entrance" "You look upon a tunnel of doom. Dare ye enter?" (M.fromList [(West, castle), (North, tunnelOfDoom 0)])
+tunnelOfDoomEntrance = Location
+  "Tunnel of Doom entrance"
+  "You look upon a tunnel of doom. Dare ye enter?"
+  (M.fromList [(West, castle), (North, tunnelOfDoom 0)])
 
 tunnelOfDoom :: Int -> Location
-tunnelOfDoom n = Location ("Tunnel of Doom, room " <> showT n) ("You are in room " <> showT n <> " of the Tunnel of Doom. It is very dark.") (M.fromList [(South, southExit), (North, tunnelOfDoom (n+1))])
+tunnelOfDoom n = Location
+  ("Tunnel of Doom, room " <> showT n)
+  ("You are in room " <> showT n <> " of the Tunnel of Doom. It is very dark.")
+  (M.fromList [(South, southExit), (North, tunnelOfDoom (n+1))])
   where
     southExit | n == 0 = tunnelOfDoomEntrance
               | otherwise = tunnelOfDoom (n-1)

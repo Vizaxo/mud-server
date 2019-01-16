@@ -34,6 +34,7 @@ overState lens st = do
 
 makeLenses ''GameState
 
+-- | Generate a fresh player ID
 freshPId :: MonadState GameState m => m PlayerId
 freshPId = overState gsNextPlayerId $ get <* modify (+1)
 

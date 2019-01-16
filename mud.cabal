@@ -8,7 +8,7 @@ license-file:        LICENSE
 -- author:
 -- maintainer:
 -- copyright:
-category:            Game
+category:            games
 build-type:          Simple
 cabal-version:       >=1.10
 extra-source-files:  README
@@ -32,15 +32,12 @@ library
                      , Utils
   build-depends:       base >= 4.7 && < 5
                      , network
-                     , stm
                      , bytestring
                      , mtl
                      , parsec
                      , containers
                      , lens
                      , generic-lens
-                     , transformers
-                     , Stream
                      , reactive-banana
                      , text
   default-extensions:  OverloadedStrings

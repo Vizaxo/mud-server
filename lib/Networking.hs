@@ -2,11 +2,9 @@ module Networking where
 
 import Control.Applicative
 import Control.Concurrent
-import Control.Concurrent.STM
 import Control.Monad.Reader
 import Control.Monad.Writer hiding (listen)
 import Control.Monad.State
-import Control.Monad.Trans.Maybe
 import Data.Monoid
 
 import qualified Data.ByteString.Char8 as CBS
@@ -37,7 +35,6 @@ write sock = void . liftIO . send sock . CBS.pack
 
 receive :: (MonadPlus m, MonadIO m) => Socket -> m String
 receive sock = do
-  --TODO: recieve an unlimited number of bytes
   msg <- liftIO $ recv sock 1024
   when (CBS.length msg == 0) mzero
   return (init . init . CBS.unpack $ msg)

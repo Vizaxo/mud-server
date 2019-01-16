@@ -43,7 +43,7 @@ mkNetwork port initialGameState consoleEventHandler = do
   reactimate $ sequence_ . (uncurry sendToClient <$>) <$> eventsAndPorts
 
 -- | Set up network inputs on the given port to trigger FRP events
-networkInputEvents :: MonadIO m => Int -> m (AddHandler ClientEvent)
+networkInputEvents :: MonadIO m => Int -> m (AddHandler (ClientId, InputEvent))
 networkInputEvents port = liftIO $ do
   sock <- setupSocket port
   (addHandler, fire) <- newAddHandler
